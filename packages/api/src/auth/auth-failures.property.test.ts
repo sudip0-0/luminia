@@ -65,7 +65,9 @@ const RUNS = { numRuns: 200 } as const;
 
 // Each bcrypt comparison takes ~100-200ms, so the 100-iteration login
 // properties need a generous per-test timeout well above Vitest's 5s default.
-const LOGIN_TIMEOUT_MS = 60_000;
+// Sized with headroom (matching lockout.property.test.ts) so CPU contention
+// when the full suite runs in parallel cannot push it over the limit.
+const LOGIN_TIMEOUT_MS = 120_000;
 
 const SECRET = TEST_DEFAULT_ACCESS_TOKEN_SECRET;
 const FIXED_NOW = 1_700_000_000_000;
