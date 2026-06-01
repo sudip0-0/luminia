@@ -1,0 +1,28 @@
+{
+  "name": "@lumina/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --build",
+    "dev": "node --watch --experimental-strip-types src/index.ts",
+    "start": "node dist/index.js",
+    "migrate": "node dist/db/migrate-cli.js",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@lumina/shared": "0.1.0",
+    "bcryptjs": "3.0.3",
+    "fastify": "^5.2.0",
+    "ioredis": "5.10.1",
+    "jsonwebtoken": "9.0.2",
+    "pg": "8.21.0",
+    "typesense": "3.0.6"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "9.0.7",
+    "@types/pg": "8.20.0"
+  }
+}
