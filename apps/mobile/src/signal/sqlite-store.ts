@@ -17,7 +17,7 @@ import { openDatabaseAsync } from 'expo-sqlite';
 import type {
   BufferedFeedEvent,
   SignalEventStore,
-} from './types.js';
+} from './types';
 import type { FeedEventType } from '@lumina/shared';
 
 /** A bindable SQL parameter value used by this store. */

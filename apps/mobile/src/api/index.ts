@@ -1,7 +1,7 @@
 // Shared wire types and the API barrel for the Mobile_App.
 
-export { createApiClient } from './client.js';
-export type { ApiClient, ApiClientDeps, TokenStore } from './client.js';
+export { createApiClient } from './client';
+export type { ApiClient, ApiClientDeps, TokenStore } from './client';
 
 import type { Article, Depth } from '@lumina/shared';
 

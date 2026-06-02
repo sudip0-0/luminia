@@ -20,7 +20,7 @@
 // {@link WithTimeout} wrapper, defaulting to {@link realTimerWithTimeout}, so
 // tests can drive timeouts deterministically.
 
-import type { BufferedFeedEvent } from './types.js';
+import type { BufferedFeedEvent } from './types';
 
 /**
  * Flush cadence: transmit accumulated Feed_Events when 30 seconds have elapsed

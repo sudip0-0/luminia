@@ -6,7 +6,7 @@
 //   - InMemorySignalEventStore: non-durable store for tests and as a fallback.
 //   - SqliteSignalEventStore / openSignalEventStore: Expo SQLite-backed durable store.
 
-export * from './types.js';
-export * from './durable-buffer.js';
-export * from './in-memory-store.js';
-export * from './sqlite-store.js';
+export * from './types';
+export * from './durable-buffer';
+export * from './in-memory-store';
+export * from './sqlite-store';

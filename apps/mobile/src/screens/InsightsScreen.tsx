@@ -4,7 +4,7 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import type { ApiClient } from '../api/index.js';
+import type { ApiClient } from '../api';
 
 interface InsightsDto {
   articlesRead: number;

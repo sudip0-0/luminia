@@ -3,14 +3,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import type { Article } from '@lumina/shared';
 
-import { createApiClient, type TokenStore } from './api/index.js';
-import { DEFAULT_API_BASE_URL } from './config.js';
-import { OnboardingScreen } from './screens/OnboardingScreen.js';
-import { FeedScreen } from './screens/FeedScreen.js';
-import { ReaderScreen } from './screens/ReaderScreen.js';
-import { SearchScreen } from './screens/SearchScreen.js';
-import { LibraryScreen } from './screens/LibraryScreen.js';
-import { InsightsScreen } from './screens/InsightsScreen.js';
+import { createApiClient, type TokenStore } from './api';
+import { DEFAULT_API_BASE_URL } from './config';
+import { OnboardingScreen } from './screens/OnboardingScreen';
+import { FeedScreen } from './screens/FeedScreen';
+import { ReaderScreen } from './screens/ReaderScreen';
+import { SearchScreen } from './screens/SearchScreen';
+import { LibraryScreen } from './screens/LibraryScreen';
+import { InsightsScreen } from './screens/InsightsScreen';
 
 /** The top-level navigation destinations. */
 type Tab = 'feed' | 'search' | 'library' | 'insights';

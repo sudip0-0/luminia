@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Article } from '@lumina/shared';
 
-import type { ApiClient } from '../api/index.js';
+import type { ApiClient } from '../api';
 
 export interface LibraryScreenProps {
   api: ApiClient;

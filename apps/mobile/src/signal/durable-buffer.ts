@@ -16,12 +16,12 @@
 //     restarts and can be re-transmitted once connectivity returns.
 //   - Supports marking events acknowledged and listing unacknowledged events.
 
-import { SIGNAL_BUFFER_CAPACITY } from './types.js';
+import { SIGNAL_BUFFER_CAPACITY } from './types';
 import type {
   BufferedFeedEvent,
   NewBufferedEvent,
   SignalEventStore,
-} from './types.js';
+} from './types';
 
 /** Outcome of an {@link DurableSignalBuffer.enqueue} call. */
 export interface EnqueueResult {

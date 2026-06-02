@@ -10,7 +10,7 @@
 import { ScrollView, StyleSheet, Text, Pressable, View } from 'react-native';
 import type { Article } from '@lumina/shared';
 
-import { goDeeperDecision } from '../reader/relatedGating.js';
+import { goDeeperDecision } from '../reader/relatedGating';
 
 export interface ReaderScreenProps {
   article: Article;

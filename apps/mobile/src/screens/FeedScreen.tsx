@@ -10,16 +10,16 @@ import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { Article } from '@lumina/shared';
 
-import type { ApiClient, ClientFeedCard, FeedResponseDto } from '../api/index.js';
-import { FeedCard } from '../components/FeedCard.js';
+import type { ApiClient, ClientFeedCard, FeedResponseDto } from '../api';
+import { FeedCard } from '../components/FeedCard';
 import {
   canLoadMore,
   onCardEntered,
   keepGoing,
   startSession,
   type SessionState,
-} from '../session/sessionManager.js';
-import { SERENDIPITY_PILL_INTERVAL } from './feedCards.js';
+} from '../session/sessionManager';
+import { SERENDIPITY_PILL_INTERVAL } from './feedCards';
 
 export interface FeedScreenProps {
   api: ApiClient;

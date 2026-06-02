@@ -12,7 +12,7 @@
 import type {
   BufferedFeedEvent,
   SignalEventStore,
-} from './types.js';
+} from './types';
 
 interface StoredEntry {
   event: BufferedFeedEvent;

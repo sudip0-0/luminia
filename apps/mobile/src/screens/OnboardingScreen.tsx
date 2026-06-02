@@ -10,8 +10,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { Depth } from '@lumina/shared';
 
-import type { ApiClient, OnboardingCompleteRequest, TaxonomyTopicDto } from '../api/index.js';
-import { canAdvanceOnboarding, DEFAULT_ENABLED_SOURCES } from '../onboarding/gating.js';
+import type { ApiClient, OnboardingCompleteRequest, TaxonomyTopicDto } from '../api';
+import { canAdvanceOnboarding, DEFAULT_ENABLED_SOURCES } from '../onboarding/gating';
 
 const DEPTHS: Depth[] = ['quick', 'balanced', 'deep'];
 const DEFAULT_DAILY_GOAL = 15;

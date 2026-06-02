@@ -8,8 +8,8 @@ import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Article } from '@lumina/shared';
 
-import type { ApiClient } from '../api/index.js';
-import { addSearchQuery } from '../search/searchHistory.js';
+import type { ApiClient } from '../api';
+import { addSearchQuery } from '../search/searchHistory';
 
 export interface SearchScreenProps {
   api: ApiClient;
