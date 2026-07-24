@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { createApiClient, type TokenStore } from './client.js';
+import { ApiHttpError, createApiClient, type TokenStore } from './client.js';
 
 // Tests for transparent access-token refresh on 401 (Requirement 2.3).
 
@@ -105,5 +105,22 @@ describe('createApiClient — transparent token refresh (Req 2.3)', () => {
 
     expect(res.status).toBe(401);
     expect(refreshCalls).toHaveLength(0);
+  });
+
+  it('throws ApiHttpError from getJson on non-2xx responses', async () => {
+    const fetchImpl = vi.fn(async () =>
+      jsonResponse({ error: { code: 'NOT_FOUND', message: 'Missing' } }, 404),
+    );
+    const client = createApiClient({
+      baseUrl: 'http://api',
+      tokens: memoryTokenStore('access-1', 'refresh-1'),
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+
+    await expect(client.getJson('/missing')).rejects.toMatchObject({
+      name: 'ApiHttpError',
+      status: 404,
+      message: 'Missing',
+    } satisfies Partial<ApiHttpError>);
   });
 });

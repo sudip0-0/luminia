@@ -30,10 +30,30 @@ export interface ApiClientDeps {
   fetchImpl?: typeof fetch;
 }
 
-/** The refresh endpoint's success payload. */
+/** The refresh endpoint's success payload (rotated access + refresh pair). */
 interface RefreshResponse {
   accessToken: string;
   refreshToken: string;
+}
+
+/** Thrown when a JSON helper receives a non-2xx response. */
+export class ApiHttpError extends Error {
+  readonly status: number;
+  readonly body: unknown;
+
+  constructor(status: number, body: unknown) {
+    const message =
+      typeof body === 'object' &&
+      body !== null &&
+      'error' in body &&
+      typeof (body as { error?: { message?: unknown } }).error?.message === 'string'
+        ? (body as { error: { message: string } }).error.message
+        : `Request failed with status ${status}`;
+    super(message);
+    this.name = 'ApiHttpError';
+    this.status = status;
+    this.body = body;
+  }
 }
 
 /** The API client surface used by the screens. */
@@ -44,6 +64,16 @@ export interface ApiClient {
   getJson<T>(path: string): Promise<T>;
   /** Convenience: POST `body` as JSON to `path` and parse a JSON body of type `T`. */
   postJson<T>(path: string, body: unknown): Promise<T>;
+}
+
+async function parseJsonBody(res: Response): Promise<unknown> {
+  const text = await res.text();
+  if (!text) return null;
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
 }
 
 /**
@@ -90,18 +120,26 @@ export function createApiClient(deps: ApiClientDeps): ApiClient {
     return fetchImpl(url, withAuth(init));
   }
 
+  async function readOkJson<T>(res: Response): Promise<T> {
+    const body = await parseJsonBody(res);
+    if (!res.ok) {
+      throw new ApiHttpError(res.status, body);
+    }
+    return body as T;
+  }
+
   async function getJson<T>(path: string): Promise<T> {
-    const res = await request(path);
-    return (await res.json()) as T;
+    return readOkJson<T>(await request(path));
   }
 
   async function postJson<T>(path: string, body: unknown): Promise<T> {
-    const res = await request(path, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    return (await res.json()) as T;
+    return readOkJson<T>(
+      await request(path, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      }),
+    );
   }
 
   return { request, getJson, postJson };

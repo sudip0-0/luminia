@@ -1,6 +1,6 @@
 // Shared wire types and the API barrel for the Mobile_App.
 
-export { createApiClient } from './client';
+export { ApiHttpError, createApiClient } from './client';
 export type { ApiClient, ApiClientDeps, TokenStore } from './client';
 
 import type { Article, Depth } from '@lumina/shared';
@@ -21,10 +21,11 @@ export interface ClientFeedCard {
 
 /** `GET /onboarding/topics` taxonomy entry (Requirement 3.1). */
 export interface TaxonomyTopicDto {
-  id: string;
+  id?: string;
   slug: string;
   label: string;
-  parentId: string | null;
+  parentId?: string | null;
+  parentSlug?: string | null;
   color: string;
   iconName: string;
 }

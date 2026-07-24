@@ -8,7 +8,7 @@
 // method (`add(name, data, { repeat: { every } })`).
 
 import { SOURCES, type Source } from '@lumina/shared';
-import { QUEUE_NAMES, type QueueName } from '../index.js';
+import { QUEUE_NAMES, type QueueName } from '../queues.js';
 import { CRAWL_INTERVALS, SIX_HOURS_MS } from './intervals.js';
 
 /** The job-name prefix used for each per-source repeatable crawl job. */

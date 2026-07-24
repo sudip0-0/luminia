@@ -120,7 +120,13 @@ export interface RefreshInput {
 
 /** Discriminated result of {@link refresh}. */
 export type RefreshResult =
-  | { ok: true; accessToken: string; accessTokenExpiresAt: number }
+  | {
+      ok: true;
+      accessToken: string;
+      accessTokenExpiresAt: number;
+      refreshToken: string;
+      refreshTokenExpiresAt: string;
+    }
   | { ok: false; error: ApiErrorEnvelope };
 
 /** Dependencies for {@link logout}. */
@@ -228,10 +234,10 @@ export async function login(
 }
 
 /**
- * Exchange a refresh token for a new 15-minute access token (Requirements 2.3,
+ * Exchange a refresh token for a fresh access + refresh pair (Requirements 2.3,
  * 2.4). The presented token is hashed and looked up; a missing, revoked, or
- * expired row yields the generic auth error. A new refresh token is NOT issued
- * — the existing 30-day refresh token continues until logout or expiry.
+ * expired row yields the generic auth error. On success the presented refresh
+ * token is revoked and a new 30-day refresh token is issued (rotation).
  */
 export async function refresh(
   deps: RefreshDeps,
@@ -253,11 +259,19 @@ export async function refresh(
     return authFailure();
   }
 
+  // Rotate: revoke the presented refresh token before issuing a replacement.
+  await revokeRefreshToken(db, tokenHash);
+
   const access = issueAccessToken(record.userId, tokenOptions);
+  const nextRefresh = await issueRefreshToken(db, record.userId, {
+    now: tokenOptions?.now,
+  });
   return {
     ok: true,
     accessToken: access.token,
     accessTokenExpiresAt: access.expiresAt,
+    refreshToken: nextRefresh.token,
+    refreshTokenExpiresAt: nextRefresh.expiresAt,
   };
 }
 

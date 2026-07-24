@@ -56,15 +56,36 @@ export function validateEmail(email: string): boolean {
 
 /**
  * Accepts iff the password length is in the inclusive range
- * [{@link MIN_PASSWORD_LENGTH}, {@link MAX_PASSWORD_LENGTH}] = [8, 128]
+ * [{@link MIN_PASSWORD_LENGTH}, {@link MAX_PASSWORD_LENGTH}] = [8, 128],
+ * is not whitespace-only, and is not a well-known common password
  * (Requirement 1.4).
  */
+const COMMON_PASSWORDS = new Set(
+  [
+    'password',
+    'password1',
+    'password123',
+    '12345678',
+    '123456789',
+    'qwertyui',
+    'qwerty123',
+    'letmein1',
+    'welcome1',
+    'admin123',
+    'iloveyou',
+    'abc12345',
+  ].map((p) => p.toLowerCase()),
+);
+
 export function validatePassword(pw: string): boolean {
-  return (
-    typeof pw === 'string' &&
-    pw.length >= MIN_PASSWORD_LENGTH &&
-    pw.length <= MAX_PASSWORD_LENGTH
-  );
+  if (typeof pw !== 'string') return false;
+  if (pw.length < MIN_PASSWORD_LENGTH || pw.length > MAX_PASSWORD_LENGTH) {
+    return false;
+  }
+  // Reject whitespace-only or passwords that trim down below the minimum.
+  if (pw.trim().length < MIN_PASSWORD_LENGTH) return false;
+  if (COMMON_PASSWORDS.has(pw.toLowerCase())) return false;
+  return true;
 }
 
 /**

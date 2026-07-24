@@ -306,6 +306,19 @@ describe('refresh', () => {
     expect(result.accessTokenExpiresAt).toBe(
       Math.floor(FIXED_NOW / 1000) + ACCESS_TOKEN_TTL_SECONDS,
     );
+    expect(result.refreshToken).toBeTruthy();
+    expect(result.refreshToken).not.toBe(rawToken);
+    expect(result.refreshTokenExpiresAt).toBe(
+      new Date(FIXED_NOW + REFRESH_TOKEN_TTL_SECONDS * 1000).toISOString(),
+    );
+    const revokeCall = db.calls.find((c) =>
+      normalizeSql(c.sql).includes('UPDATE refresh_token'),
+    );
+    expect(revokeCall).toBeDefined();
+    const insertCall = db.calls.find((c) =>
+      normalizeSql(c.sql).includes('INSERT INTO refresh_token'),
+    );
+    expect(insertCall).toBeDefined();
   });
 
   it('rejects an unknown/malformed token with the generic error (2.4)', async () => {

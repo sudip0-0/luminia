@@ -1,10 +1,4 @@
 // Feed screen (Requirements 8, 10.4, 15, 17, 23).
-//
-// Fetches the personalized feed, renders cards (read-time + source, no
-// engagement counts, no autoplay), shows the "Something new" pill on serendipity
-// cards, and tracks the soft feed end at 30 viewed cards via the Session_Manager
-// (Requirement 15). Short tap opens the Reader; long-press surfaces the action
-// sheet; the skip control records a skip (the gesture layer wires swipe-left).
 
 import { useCallback, useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -12,6 +6,7 @@ import type { Article } from '@lumina/shared';
 
 import type { ApiClient, ClientFeedCard, FeedResponseDto } from '../api';
 import { FeedCard } from '../components/FeedCard';
+import { StatusBlock } from '../components/StatusBlock';
 import {
   canLoadMore,
   onCardEntered,
@@ -28,21 +23,31 @@ export interface FeedScreenProps {
   onAction: (article: Article) => void;
 }
 
+type LoadState = 'loading' | 'ready' | 'error';
+
 export function FeedScreen({ api, dailyGoalMinutes, onOpenArticle, onAction }: FeedScreenProps) {
   const [cards, setCards] = useState<ClientFeedCard[]>([]);
+  const [loadState, setLoadState] = useState<LoadState>('loading');
+  const [errorMessage, setErrorMessage] = useState('Something went wrong.');
   const [session, setSession] = useState<SessionState>(() =>
     startSession({ dailyGoalMinutes, now: Date.now() }),
   );
 
   const load = useCallback(async () => {
-    const res = await api.getJson<FeedResponseDto>('/feed?tab=foryou');
-    setCards(
-      res.articles.map((article, i) => ({
-        article,
-        // Visual pill cadence mirrors the server's every-10th serendipity slot.
-        serendipity: (i + 1) % SERENDIPITY_PILL_INTERVAL === 0,
-      })),
-    );
+    setLoadState('loading');
+    try {
+      const res = await api.getJson<FeedResponseDto>('/feed?tab=foryou');
+      setCards(
+        res.articles.map((article, i) => ({
+          article,
+          serendipity: (i + 1) % SERENDIPITY_PILL_INTERVAL === 0,
+        })),
+      );
+      setLoadState('ready');
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'Failed to load feed.');
+      setLoadState('error');
+    }
   }, [api]);
 
   useEffect(() => {
@@ -50,6 +55,13 @@ export function FeedScreen({ api, dailyGoalMinutes, onOpenArticle, onAction }: F
   }, [load]);
 
   const handleViewable = () => setSession((s) => onCardEntered(s));
+
+  if (loadState === 'loading' && cards.length === 0) {
+    return <StatusBlock kind="loading" label="Loading feed" />;
+  }
+  if (loadState === 'error' && cards.length === 0) {
+    return <StatusBlock kind="error" message={errorMessage} onRetry={() => void load()} />;
+  }
 
   return (
     <View style={styles.container}>
@@ -66,11 +78,17 @@ export function FeedScreen({ api, dailyGoalMinutes, onOpenArticle, onAction }: F
         )}
         onViewableItemsChanged={handleViewable}
         contentContainerStyle={styles.list}
+        ListEmptyComponent={<StatusBlock kind="empty" message="No articles yet." />}
       />
       {!canLoadMore(session) ? (
-        <View style={styles.sessionEnd}>
+        <View style={styles.sessionEnd} accessibilityRole="summary">
           <Text style={styles.sessionTitle}>That is a good stopping point.</Text>
-          <Pressable style={styles.keepGoing} onPress={() => setSession((s) => keepGoing(s))}>
+          <Pressable
+            style={styles.keepGoing}
+            onPress={() => setSession((s) => keepGoing(s))}
+            accessibilityRole="button"
+            accessibilityLabel="Keep going"
+          >
             <Text style={styles.keepGoingText}>Keep going</Text>
           </Pressable>
         </View>

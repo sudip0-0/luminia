@@ -48,4 +48,10 @@ describe('Backend API app', () => {
     expect(res.statusCode).toBe(200);
     expect(res.json().topics).toHaveLength(1);
   });
+
+  it('reports ready when no readiness deps are configured', async () => {
+    const res = await app.inject({ method: 'GET', url: '/ready' });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().status).toBe('ok');
+  });
 });

@@ -1,14 +1,11 @@
 // Search screen (Requirements 20.4, 20.8).
-//
-// Wires the query box to the Search_Service and stores non-empty queries in a
-// bounded, unique, recency-ordered local history (Requirement 20.8, via
-// addSearchQuery). Results are rendered as a simple list.
 
 import { useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { Article } from '@lumina/shared';
 
 import type { ApiClient } from '../api';
+import { StatusBlock } from '../components/StatusBlock';
 import { addSearchQuery } from '../search/searchHistory';
 
 export interface SearchScreenProps {
@@ -20,15 +17,26 @@ export function SearchScreen({ api, onOpenArticle }: SearchScreenProps) {
   const [query, setQuery] = useState('');
   const [history, setHistory] = useState<string[]>([]);
   const [results, setResults] = useState<Article[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const runSearch = async (q: string) => {
     const trimmed = q.trim();
     if (trimmed.length === 0) return;
     setHistory((h) => addSearchQuery(h, trimmed));
-    const res = await api.getJson<{ results: Article[] }>(
-      `/search?q=${encodeURIComponent(trimmed)}`,
-    );
-    setResults(res.results);
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await api.getJson<{ results?: Article[]; items?: Article[] }>(
+        `/search?q=${encodeURIComponent(trimmed)}`,
+      );
+      setResults(res.results ?? res.items ?? []);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Search failed.');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -41,11 +49,25 @@ export function SearchScreen({ api, onOpenArticle }: SearchScreenProps) {
         onChangeText={setQuery}
         onSubmitEditing={() => void runSearch(query)}
         returnKeyType="search"
+        accessibilityLabel="Search Lumina"
+        accessibilityRole="search"
       />
-      {history.length > 0 && results.length === 0 ? (
+      {loading ? <StatusBlock kind="loading" label="Searching" /> : null}
+      {error ? (
+        <StatusBlock kind="error" message={error} onRetry={() => void runSearch(query)} />
+      ) : null}
+      {!loading && !error && history.length > 0 && results.length === 0 ? (
         <View style={styles.history}>
           {history.map((h) => (
-            <Pressable key={h} onPress={() => { setQuery(h); void runSearch(h); }}>
+            <Pressable
+              key={h}
+              onPress={() => {
+                setQuery(h);
+                void runSearch(h);
+              }}
+              accessibilityRole="button"
+              accessibilityLabel={`Search ${h}`}
+            >
               <Text style={styles.historyItem}>{h}</Text>
             </Pressable>
           ))}
@@ -55,7 +77,12 @@ export function SearchScreen({ api, onOpenArticle }: SearchScreenProps) {
         data={results}
         keyExtractor={(a) => a.id}
         renderItem={({ item }) => (
-          <Pressable style={styles.result} onPress={() => onOpenArticle(item)}>
+          <Pressable
+            style={styles.result}
+            onPress={() => onOpenArticle(item)}
+            accessibilityRole="button"
+            accessibilityLabel={item.title}
+          >
             <Text style={styles.resultTitle}>{item.title}</Text>
           </Pressable>
         )}

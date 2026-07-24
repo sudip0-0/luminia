@@ -88,6 +88,7 @@ describe('error envelope', () => {
       CONFLICT: 'CONFLICT',
       FORBIDDEN: 'FORBIDDEN',
       RATE_LIMITED: 'RATE_LIMITED',
+      INTERNAL: 'INTERNAL',
     });
   });
 

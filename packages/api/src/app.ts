@@ -1,12 +1,20 @@
-import Fastify, { type FastifyInstance, type FastifyError } from 'fastify';
+import Fastify, {
+  type FastifyInstance,
+  type FastifyError,
+  type FastifyRequest,
+} from 'fastify';
+import { randomUUID } from 'node:crypto';
 import { ERROR_CODES, makeError } from '@lumina/shared';
 
 import type { Queryable } from './repositories/queryable.js';
 import { makeAccessTokenGuard, type AccessTokenGuardDeps } from './auth/middleware.js';
+import { authRoutes, type AuthRoutesDeps } from './auth/routes.js';
 import { onboardingRoutes } from './onboarding/routes.js';
 import { authenticatedRoutes } from './authenticated-routes.js';
 import type { FeedReturnedSet } from './feed/assembly.js';
 import type { ArticleSearchClient } from './search/service.js';
+import type { ReadinessDeps } from './ready.js';
+import { checkReadiness } from './ready.js';
 
 /**
  * Dependencies for {@link buildApp}. All are optional so the bare app (with the
@@ -20,33 +28,42 @@ export interface AppDeps {
   db?: Queryable;
   /** Access-token guard dependencies; when present an authenticated scope is mounted. */
   auth?: AccessTokenGuardDeps;
+  /** Public auth routes (register/login/refresh/oauth/logout). */
+  authRoutes?: AuthRoutesDeps;
   /** Redis returned-set; when present the authenticated Feed routes are mounted. */
   redis?: FeedReturnedSet;
   /** Typesense-backed search client; when present the authenticated Search route is mounted. */
   search?: ArticleSearchClient;
+  /** Optional readiness probe dependencies (DB/Redis/Typesense). */
+  readiness?: ReadinessDeps;
+  /** Disable request-id generation (tests can leave default). */
+  genRequestId?: () => string;
 }
 
 /**
- * Builds the Lumina Backend API Fastify instance (task 28.1).
+ * Builds the Lumina Backend API Fastify instance.
  *
  * Cross-cutting wiring that every route sits behind:
- *   - a uniform error envelope `{ error: { code, message, details? } }` for both
- *     thrown errors and unmatched routes (the design's Error Handling section);
- *   - a liveness probe at `GET /health` (always public);
- *   - public service routes mounted at the root when {@link AppDeps.db} is given;
- *   - authenticated service routes mounted inside a scope guarded by the
- *     access-token middleware (Requirements 2.6, 26.4) when {@link AppDeps.auth}
- *     is given.
- *
- * The authenticated service routes (profile, article detail, topic mute/unmute,
- * events, library saves/listing/collections, feed tabs, insights, notification
- * preferences) are mounted by {@link authenticatedRoutes} inside
- * {@link registerAuthenticatedRoutes}. Feed assembly and Search additionally
- * require external clients (Redis, Typesense) and mount only when those are
- * injected via {@link AppDeps.redis} / {@link AppDeps.search}.
+ *   - structured logging with a per-request `requestId`;
+ *   - a uniform error envelope `{ error: { code, message, details? } }`;
+ *   - liveness at `GET /health` and readiness at `GET /ready`;
+ *   - public auth + onboarding routes when deps are supplied;
+ *   - authenticated routes behind the access-token guard.
  */
 export function buildApp(deps: AppDeps = {}): FastifyInstance {
-  const app = Fastify({ logger: true });
+  const genRequestId = deps.genRequestId ?? (() => randomUUID());
+
+  const app = Fastify({
+    logger: {
+      level: process.env.LOG_LEVEL ?? 'info',
+    },
+    requestIdHeader: 'x-request-id',
+    genReqId: () => genRequestId(),
+  });
+
+  app.addHook('onRequest', async (request: FastifyRequest) => {
+    request.log = request.log.child({ requestId: request.id });
+  });
 
   // Uniform error envelope for thrown errors. A Fastify validation error maps to
   // VALIDATION_ERROR (400); anything else maps to an INTERNAL 500 without
@@ -60,15 +77,22 @@ export function buildApp(deps: AppDeps = {}): FastifyInstance {
         }));
       return;
     }
+    // @fastify/rate-limit uses 429
+    if (error.statusCode === 429) {
+      await reply
+        .code(429)
+        .send(makeError(ERROR_CODES.RATE_LIMITED, 'Too many requests'));
+      return;
+    }
     const status = typeof error.statusCode === 'number' ? error.statusCode : 500;
-    const code = status === 404 ? ERROR_CODES.NOT_FOUND : ERROR_CODES.VALIDATION_ERROR;
     if (status >= 500) {
       app.log.error(error);
       await reply
         .code(500)
-        .send(makeError(ERROR_CODES.VALIDATION_ERROR, 'Internal server error'));
+        .send(makeError(ERROR_CODES.INTERNAL, 'Internal server error'));
       return;
     }
+    const code = status === 404 ? ERROR_CODES.NOT_FOUND : ERROR_CODES.VALIDATION_ERROR;
     await reply.code(status).send(makeError(code, error.message));
   });
 
@@ -79,7 +103,23 @@ export function buildApp(deps: AppDeps = {}): FastifyInstance {
 
   app.get('/health', async () => ({ status: 'ok' }));
 
-  // Public service routes.
+  app.get('/ready', async (_request, reply) => {
+    if (!deps.readiness) {
+      return { status: 'ok', checks: { configured: false } };
+    }
+    const result = await checkReadiness(deps.readiness);
+    if (!result.ok) {
+      return reply.code(503).send(result);
+    }
+    return result;
+  });
+
+  // Public auth routes (register/login/refresh/oauth/logout).
+  if (deps.authRoutes) {
+    void app.register(authRoutes(deps.authRoutes));
+  }
+
+  // Public onboarding taxonomy (completion is authenticated).
   if (deps.db) {
     void app.register(onboardingRoutes({ db: deps.db }));
   }
@@ -95,16 +135,11 @@ export function buildApp(deps: AppDeps = {}): FastifyInstance {
 /**
  * Build the authenticated route scope: an encapsulated Fastify plugin that
  * installs the access-token guard as a `preHandler` so every route registered
- * within it is protected (Requirements 2.6, 26.4). Per-service authenticated
- * route plugins are registered inside this scope as they are wired.
+ * within it is protected (Requirements 2.6, 26.4).
  */
 function registerAuthenticatedRoutes(authDeps: AccessTokenGuardDeps, deps: AppDeps) {
   return async (scope: FastifyInstance): Promise<void> => {
     scope.addHook('preHandler', makeAccessTokenGuard(authDeps));
-    // Authenticated service plugins. db-only routes (profile, article detail,
-    // topic mute/unmute, events, library saves, feed tabs, notification
-    // preferences) always mount; Feed assembly and Search mount when their
-    // external clients (Redis, Typesense) are injected.
     if (deps.db) {
       await scope.register(
         authenticatedRoutes({ db: deps.db, redis: deps.redis, search: deps.search }),

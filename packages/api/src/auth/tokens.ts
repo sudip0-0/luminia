@@ -107,7 +107,10 @@ export function issueAccessToken(
   // injected clock. jsonwebtoken honours a payload-supplied `iat` as the token
   // timestamp and leaves a payload-supplied `exp` untouched, so we avoid the
   // `expiresIn` option (which would conflict with an explicit `exp`).
-  const token = jwt.sign({ iat, exp }, secret, signOptions);
+  const token = jwt.sign({ iat, exp }, secret, {
+    ...signOptions,
+    algorithm: 'HS256',
+  });
 
   return { token, jti, expiresAt: exp };
 }
@@ -158,7 +161,10 @@ export async function verifyAccessToken(
 
   let payload: JwtPayload;
   try {
-    const decoded = jwt.verify(token, secret, { clockTimestamp });
+    const decoded = jwt.verify(token, secret, {
+      clockTimestamp,
+      algorithms: ['HS256'],
+    });
     if (typeof decoded === 'string') {
       return { ok: false, reason: 'malformed' };
     }

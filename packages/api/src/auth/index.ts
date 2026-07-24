@@ -8,3 +8,8 @@ export * from './config.js';
 export * from './hash.js';
 export * from './tokens.js';
 export * from './middleware.js';
+export * from './routes.js';
+export * from './session.js';
+export * from './register.js';
+export * from './passwords.js';
+export * from './profile.js';

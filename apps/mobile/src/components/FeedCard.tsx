@@ -30,6 +30,7 @@ export function FeedCard({ article, serendipity, onOpen, onLongPress }: FeedCard
       onLongPress={() => onLongPress(article)}
       delayLongPress={LONG_PRESS_MS}
       accessibilityRole="button"
+      accessibilityLabel={`${article.title}, ${article.readTimeMinutes} minute read from ${article.source}`}
     >
       {serendipity ? (
         <View style={styles.pill}>

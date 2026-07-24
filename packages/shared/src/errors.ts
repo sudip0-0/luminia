@@ -24,6 +24,8 @@ export const ERROR_CODES = {
   FORBIDDEN: 'FORBIDDEN',
   /** The actor has exceeded a rate limit. */
   RATE_LIMITED: 'RATE_LIMITED',
+  /** An unexpected server failure; never leaks internals to clients. */
+  INTERNAL: 'INTERNAL',
 } as const;
 
 /** A stable error code string (one of {@link ERROR_CODES}). */

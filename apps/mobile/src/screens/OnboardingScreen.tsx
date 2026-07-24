@@ -15,6 +15,14 @@ import { canAdvanceOnboarding, DEFAULT_ENABLED_SOURCES } from '../onboarding/gat
 
 const DEPTHS: Depth[] = ['quick', 'balanced', 'deep'];
 const DEFAULT_DAILY_GOAL = 15;
+const FALLBACK_TOPICS: TaxonomyTopicDto[] = [
+  { slug: 'science', label: 'Science', parentSlug: null, color: '#63D2FF', iconName: 'atom' },
+  { slug: 'technology', label: 'Technology', parentSlug: null, color: '#C9B8FF', iconName: 'cpu' },
+  { slug: 'history', label: 'History', parentSlug: null, color: '#FFCC66', iconName: 'landmark' },
+  { slug: 'health', label: 'Health', parentSlug: null, color: '#7EE787', iconName: 'heart-pulse' },
+  { slug: 'culture', label: 'Culture', parentSlug: null, color: '#FF9BD2', iconName: 'palette' },
+  { slug: 'business', label: 'Business', parentSlug: null, color: '#A7F3D0', iconName: 'briefcase' },
+];
 
 export interface OnboardingScreenProps {
   api: ApiClient;
@@ -31,12 +39,21 @@ export function OnboardingScreen({ api, onComplete }: OnboardingScreenProps) {
   useEffect(() => {
     api
       .getJson<{ topics: TaxonomyTopicDto[] }>('/onboarding/topics')
-      .then((res) => setTopics(res.topics))
-      .catch(() => setError('Could not load topics.'));
+      .then((res) => {
+        if (!Array.isArray(res.topics)) throw new Error('Invalid topics response');
+        setTopics(res.topics);
+        setError(null);
+      })
+      .catch(() => {
+        setTopics(FALLBACK_TOPICS);
+        setError('Using starter topics until the API is reachable.');
+      });
   }, [api]);
 
-  const toggleTopic = (id: string) =>
+  const toggleTopic = (topic: TaxonomyTopicDto) => {
+    const id = topic.id ?? topic.slug;
     setSelected((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
+  };
 
   const canAdvance = canAdvanceOnboarding({ topicIds: selected, depth });
 
@@ -62,10 +79,11 @@ export function OnboardingScreen({ api, onComplete }: OnboardingScreenProps) {
       {error ? <Text style={styles.error}>{error}</Text> : null}
       <View style={styles.chips}>
         {topics.map((t) => (
+          // The API returns `slug`; older client fixtures may include `id`.
           <Pressable
-            key={t.id}
-            style={[styles.chip, selected.includes(t.id) && styles.chipOn]}
-            onPress={() => toggleTopic(t.id)}
+            key={t.id ?? t.slug}
+            style={[styles.chip, selected.includes(t.id ?? t.slug) && styles.chipOn]}
+            onPress={() => toggleTopic(t)}
           >
             <Text style={styles.chipText}>{t.label}</Text>
           </Pressable>

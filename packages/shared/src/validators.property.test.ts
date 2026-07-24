@@ -135,10 +135,15 @@ describe('Property 1 - validateEmail accepts iff well-formed and <= 254 chars (R
 // --- validatePassword (Requirement 1.4) -----------------------------------
 
 describe('Property 1 - validatePassword accepts iff length in [8, 128] (Req 1.4)', () => {
-  it('accepts passwords whose length is within range', () => {
+  it('accepts passwords whose length is within range (non-whitespace, non-common)', () => {
     fc.assert(
       fc.property(asciiOfLength(MIN_PASSWORD_LENGTH, MAX_PASSWORD_LENGTH), (pw) => {
-        expect(validatePassword(pw)).toBe(true);
+        const expected =
+          pw.trim().length >= MIN_PASSWORD_LENGTH &&
+          !['password', 'password1', 'password123', '12345678', '123456789', 'qwertyui', 'qwerty123', 'letmein1', 'welcome1', 'admin123', 'iloveyou', 'abc12345'].includes(
+            pw.toLowerCase(),
+          );
+        expect(validatePassword(pw)).toBe(expected);
       }),
       RUNS
     );

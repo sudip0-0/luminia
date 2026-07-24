@@ -17,10 +17,15 @@ export const ACCESS_TOKEN_TTL_SECONDS = 15 * 60;
 export const REFRESH_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 
 /**
+ * Minimum length for a production access-token signing secret. Shorter values
+ * are rejected so a misconfigured deploy cannot silently use a weak secret.
+ */
+export const MIN_ACCESS_TOKEN_SECRET_LENGTH = 32;
+
+/**
  * Development/test default for the access-token signing secret. Production MUST
- * override this via {@link ACCESS_TOKEN_SECRET_ENV}; it exists only so tests and
- * local runs work without external configuration. It is intentionally obvious
- * so a leaked production secret of this value is trivially spotted.
+ * set {@link ACCESS_TOKEN_SECRET_ENV}; the default is only allowed when
+ * `NODE_ENV=test` or {@link ALLOW_TEST_SECRET_ENV} is truthy.
  */
 export const TEST_DEFAULT_ACCESS_TOKEN_SECRET =
   'lumina-test-access-token-secret-do-not-use-in-production';
@@ -29,13 +34,45 @@ export const TEST_DEFAULT_ACCESS_TOKEN_SECRET =
 export const ACCESS_TOKEN_SECRET_ENV = 'AUTH_ACCESS_TOKEN_SECRET';
 
 /**
- * Resolve the access-token signing secret from the environment, falling back to
- * the test default when unset. Keeping this configurable (rather than hardcoded)
- * lets each environment use its own secret while tests stay hermetic.
+ * When set to a truthy value (`1`, `true`, `yes`), allows falling back to
+ * {@link TEST_DEFAULT_ACCESS_TOKEN_SECRET} outside of `NODE_ENV=test`.
  */
-export function getAccessTokenSecret(): string {
-  const fromEnv = process.env[ACCESS_TOKEN_SECRET_ENV];
-  return fromEnv && fromEnv.length > 0
-    ? fromEnv
-    : TEST_DEFAULT_ACCESS_TOKEN_SECRET;
+export const ALLOW_TEST_SECRET_ENV = 'AUTH_ALLOW_TEST_SECRET';
+
+/** Whether the process is allowed to use the built-in test signing secret. */
+export function allowsTestAccessTokenSecret(
+  env: NodeJS.ProcessEnv = process.env,
+): boolean {
+  if (env.NODE_ENV === 'test') return true;
+  const flag = env[ALLOW_TEST_SECRET_ENV];
+  if (!flag) return false;
+  const normalized = flag.trim().toLowerCase();
+  return normalized === '1' || normalized === 'true' || normalized === 'yes';
+}
+
+/**
+ * Resolve the access-token signing secret from the environment.
+ *
+ * Fail-closed: when the env var is unset/empty/too short and the test-secret
+ * escape hatch is not enabled, this throws so a misconfigured process cannot
+ * mint or verify tokens with a known default.
+ */
+export function getAccessTokenSecret(
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  const fromEnv = env[ACCESS_TOKEN_SECRET_ENV];
+  if (fromEnv && fromEnv.length >= MIN_ACCESS_TOKEN_SECRET_LENGTH) {
+    return fromEnv;
+  }
+  if (fromEnv && fromEnv.length > 0) {
+    throw new Error(
+      `${ACCESS_TOKEN_SECRET_ENV} must be at least ${MIN_ACCESS_TOKEN_SECRET_LENGTH} characters.`,
+    );
+  }
+  if (allowsTestAccessTokenSecret(env)) {
+    return TEST_DEFAULT_ACCESS_TOKEN_SECRET;
+  }
+  throw new Error(
+    `${ACCESS_TOKEN_SECRET_ENV} is required (set NODE_ENV=test or ${ALLOW_TEST_SECRET_ENV}=1 only for local/test).`,
+  );
 }

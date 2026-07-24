@@ -62,6 +62,12 @@ describe('validatePassword (Requirement 1.4)', () => {
     expect(validatePassword('a'.repeat(129))).toBe(false);
     expect(validatePassword('')).toBe(false);
   });
+
+  it('rejects whitespace-only and common passwords', () => {
+    expect(validatePassword('        ')).toBe(false);
+    expect(validatePassword('password')).toBe(false);
+    expect(validatePassword('12345678')).toBe(false);
+  });
 });
 
 describe('validateDailyGoal (Requirements 1.7, 1.8, 3.4, 26.2)', () => {

@@ -55,6 +55,10 @@ import { getTabs } from './feed/tabs.js';
 import { search, type ArticleSearchClient } from './search/service.js';
 import { setPreferences } from './notifications/service.js';
 import type { SearchFilters } from './search/filters.js';
+import {
+  completeOnboarding,
+  type OnboardingSources,
+} from './onboarding/complete.js';
 
 /** Dependencies for the authenticated routes. */
 export interface AuthedRoutesDeps {
@@ -78,6 +82,8 @@ function statusForError(envelope: ApiErrorEnvelope): number {
       return 403;
     case 'RATE_LIMITED':
       return 429;
+    case 'INTERNAL':
+      return 500;
     default:
       return 400;
   }
@@ -122,6 +128,42 @@ export function authenticatedRoutes(deps: AuthedRoutesDeps) {
     app.get('/me', async (request, reply) => {
       const result = await getProfile({ db }, request.auth!.userId);
       return result.ok ? result.profile : sendError(reply, result.error);
+    });
+
+    // Onboarding completion (Requirements 3.2-3.7) — authenticated.
+    app.post('/onboarding/complete', async (request, reply) => {
+      const body = (request.body ?? {}) as {
+        topicIds?: string[];
+        depth?: string;
+        dailyGoalMinutes?: number;
+        enabledSources?: string[];
+      };
+      if (!Array.isArray(body.topicIds) || typeof body.depth !== 'string') {
+        return sendError(
+          reply,
+          makeError(ERROR_CODES.VALIDATION_ERROR, 'topicIds and depth are required.'),
+        );
+      }
+      const sources: OnboardingSources = {};
+      if (Array.isArray(body.enabledSources)) {
+        for (const source of body.enabledSources) {
+          (sources as Record<string, boolean>)[source] = true;
+        }
+      }
+      const result = await completeOnboarding(
+        { db },
+        request.auth!.userId,
+        {
+          topicIds: body.topicIds,
+          depth: body.depth as never,
+          dailyGoal: body.dailyGoalMinutes ?? 15,
+          sources,
+        },
+      );
+      if (result.status === 'validation-error') {
+        return sendError(reply, result.error);
+      }
+      return result.persisted;
     });
 
     app.patch('/me', async (request, reply) => {

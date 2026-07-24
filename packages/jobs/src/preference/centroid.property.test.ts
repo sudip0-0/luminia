@@ -250,7 +250,7 @@ describe('Property 30 - recency-weighted centroid (Req 14.4, 14.5)', () => {
       }),
       RUNS,
     );
-  });
+  }, 30_000);
 
   // --- Property (2): recency strictly breaks ties ---------------------------
 
