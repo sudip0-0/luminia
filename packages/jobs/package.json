@@ -12,6 +12,6 @@
   },
   "dependencies": {
     "@lumina/shared": "0.1.0",
-    "bullmq": "^5.34.5"
+    "bullmq": "^5.81.1"
   }
 }
