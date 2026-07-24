@@ -19,12 +19,12 @@
     "expo-secure-store": "57.0.1",
     "expo-sqlite": "~56.0.4",
     "expo-status-bar": "~56.0.4",
-    "react": "19.2.3",
+    "react": "19.2.8",
     "react-native": "0.85.3",
     "react-native-safe-area-context": "5.8.0",
     "react-native-screens": "4.26.2"
   },
   "devDependencies": {
-    "@types/react": "~19.2.14"
+    "@types/react": "~19.2.17"
   }
 }
